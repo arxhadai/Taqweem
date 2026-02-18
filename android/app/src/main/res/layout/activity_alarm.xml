@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0E3B2E"
+    android:padding="32dp">
+
+    <TextView
+        android:id="@+id/prayer_name_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="80dp"
+        android:text="PRAYER NAME"
+        android:textColor="#FFFFFF"
+        android:textSize="32sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/current_time_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/prayer_name_text"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="16dp"
+        android:text="00:00"
+        android:textColor="#FFFFFF"
+        android:textSize="64sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="60dp"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/stop_button"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:backgroundTint="#D4AF37"
+            android:text="STOP"
+            android:textColor="#0E3B2E"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <Button
+            android:id="@+id/snooze_button"
+            android:layout_width="240dp"
+            android:layout_height="64dp"
+            android:backgroundTint="#2E5A4E"
+            android:text="SNOOZE (5 MIN)"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"/>
+
+    </LinearLayout>
+
+</RelativeLayout>
