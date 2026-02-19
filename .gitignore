@@ -49,6 +49,131 @@ app.*.map.json
 *.keystore
 key.properties
 
+# ============= PRODUCTION HARDENING =============
+
+# Environment & Secrets (CRITICAL)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+google-services.json
+GoogleService-Info.plist
+
+# Android Build
+android/.gradle/
+android/app/build/
+android/.idea/
+android/*.iml
+android/local.properties
+android/gradlew
+android/gradlew.bat
+android/gradle/
+android/build/
+
+# iOS Build
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/GeneratedPluginRegistrant.swift
+ios/Pods/
+ios/.pods/
+ios/Podfile.lock
+ios/Flutter/.last_build_id
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+
+# macOS
+macos/.symlinks/
+macos/Flutter/Flutter-Release.xcconfig
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Podfile.lock
+macos/Flutter/ephemeral/
+
+# Windows
+windows/flutter/generated_plugins.cmake
+windows/flutter/generated_plugins.dart
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+
+# Linux
+linux/flutter/generated_plugins.cmake
+linux/flutter/generated_plugins.dart
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugin_registrant.h
+
+# IDE & Editor
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# OS
+Thumbs.db
+ehthumbs.db
+desktop.ini
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Analytics & Generated Reports
+*.csv
+analyze_*.txt
+analyze_result*.txt
+analyze_output.txt
+analyze_current.txt
+analytics.log
+analytics-*.json
+
+# Temporary & Backup Files
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*.patch~
+
+# Build Outputs
+dist/
+release/
+*.apk
+*.aab
+*.ipa
+*.app
+*.zip
+*.tar.gz
+*.exe
+
+# Test & Coverage
+coverage/
+.coverage
+*.lcov
+test/coverage/
+
+# Gradle
+.gradle/
+gradlew.properties
+capture.xml
+lint-results*.xml
+build-report.html
+
+# Xcode
+*.pbxuser
+*.perspectivev3
+*.xcworkspace/xcuserdata/
+xcuserdata/
+
+# Generated Files (Keep tracked for CI/CD)
+# .dart_tool/generated_plugins.dart  # Usually tracked
+# lib/generated_plugin_registrant.dart  # Usually tracked
+
+
 # Environment
 .env
 .env.*
