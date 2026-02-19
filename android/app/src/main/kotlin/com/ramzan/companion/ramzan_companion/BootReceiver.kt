@@ -14,9 +14,14 @@ class BootReceiver : BroadcastReceiver() {
             action == Intent.ACTION_TIMEZONE_CHANGED ||
             action == Intent.ACTION_DATE_CHANGED
         ) {
-            Log.d("BootReceiver", "System event received: $action — launching app to reschedule alarms")
+            Log.d("BootReceiver", "System event received: $action")
 
-            // Launch the app so Flutter's NotificationScheduler can reschedule all alarms
+            // Phase B: Recover and reschedule stored alarms
+            Log.d("BootReceiver", "Initiating alarm recovery via AlarmRecoveryManager")
+            AlarmRecoveryManager.recoverAlarms(context)
+
+            // Legacy: Also launch app for Flutter's NotificationScheduler to double-check
+            Log.d("BootReceiver", "Launching app for additional scheduler verification")
             val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
             launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             if (launchIntent != null) {
