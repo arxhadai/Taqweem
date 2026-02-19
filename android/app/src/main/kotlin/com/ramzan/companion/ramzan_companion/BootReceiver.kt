@@ -7,20 +7,21 @@ import android.util.Log
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED || 
-            intent.action == "android.intent.action.QUICKBOOT_POWERON") {
-            
-            Log.d("BootReceiver", "Device rebooted, rescheduling alarms...")
-            
-            // In a real production app, we would query the local database (Hive/SharedPreferences)
-            // here and reschedule alarms. For now, we delegate this back to Flutter
-            // via a MethodChannel or wait for the app to launch and handle it.
-            // Requirement says "Reschedule all enabled alarms". 
-            // We implementation MethodChannel in MainActivity to handle this.
-            
+        val action = intent.action
+        if (action == Intent.ACTION_BOOT_COMPLETED ||
+            action == "android.intent.action.QUICKBOOT_POWERON" ||
+            action == Intent.ACTION_TIME_CHANGED ||
+            action == Intent.ACTION_TIMEZONE_CHANGED ||
+            action == Intent.ACTION_DATE_CHANGED
+        ) {
+            Log.d("BootReceiver", "System event received: $action — launching app to reschedule alarms")
+
+            // Launch the app so Flutter's NotificationScheduler can reschedule all alarms
             val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
             launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            // context.startActivity(launchIntent) // Optional: launch app to reschedule
+            if (launchIntent != null) {
+                context.startActivity(launchIntent)
+            }
         }
     }
 }

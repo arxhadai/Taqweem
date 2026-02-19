@@ -4,6 +4,10 @@ import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
 import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -49,6 +53,13 @@ class MainActivity : FlutterActivity() {
                     cancelNativeAlarm(id)
                     result.success(true)
                 }
+                "checkExactAlarmPermission" -> {
+                    result.success(checkExactAlarmPermission())
+                }
+                "requestBatteryOptimization" -> {
+                    requestBatteryOptimization()
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -69,19 +80,37 @@ class MainActivity : FlutterActivity() {
             android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
         )
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
-                android.app.AlarmManager.RTC_WAKEUP,
-                timeInMillis,
-                pendingIntent
-            )
-        } else {
-            alarmManager.setExact(
-                android.app.AlarmManager.RTC_WAKEUP,
-                timeInMillis,
-                pendingIntent
-            )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Log.e("MainActivity", "ERROR: Cannot schedule exact alarms - SCHEDULE_EXACT_ALARM permission not granted or disabled")
+                try {
+                    val settingsIntent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = Uri.parse("package:$packageName")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(settingsIntent)
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Failed to open exact alarm settings: ${e.message}")
+                    e.printStackTrace()
+                }
+                return
+            }
         }
+
+        // Use setAlarmClock for maximum reliability - exempt from Doze, shows alarm icon in status bar
+        val showIntent = android.app.PendingIntent.getActivity(
+            this,
+            id,
+            Intent(this, MainActivity::class.java),
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        Log.d("MainActivity", "Scheduling alarm: prayerName=$prayerName, id=$id, timeInMillis=$timeInMillis, soundPath=$soundPath")
+        alarmManager.setAlarmClock(
+            android.app.AlarmManager.AlarmClockInfo(timeInMillis, showIntent),
+            pendingIntent
+        )
+        Log.d("MainActivity", "Successfully called setAlarmClock for $prayerName")
     }
 
     private fun cancelNativeAlarm(id: Int) {
@@ -120,5 +149,25 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         stopSystemSound()
         super.onDestroy()
+    }
+
+    private fun checkExactAlarmPermission(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            return alarmManager.canScheduleExactAlarms()
+        }
+        return true // Pre-S always has permission
+    }
+
+    private fun requestBatteryOptimization() {
+        try {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.parse("package:$packageName")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

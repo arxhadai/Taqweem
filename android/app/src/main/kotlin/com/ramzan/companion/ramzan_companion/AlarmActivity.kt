@@ -166,16 +166,38 @@ class AlarmActivity : Activity() {
         }
     }
 
-    private fun stopAlarm() {
-        handler.removeCallbacksAndMessages(null)
-        mediaPlayer?.stop()
-        mediaPlayer?.release()
-        mediaPlayer = null
-        vibrator?.cancel()
+    private var isReleased = false
+
+    override fun onStop() {
+        super.onStop()
+        // If the activity is no longer visible, we should release resources
+        // But typical alarm behavior might want to keep ringing? 
+        // Actually, if we are stopped (e.g. home button), we usually stop the sound or show a notification.
+        // For now, let's ensure we clean up if the activity is being destroyed or strictly stopped.
+        if (isFinishing) {
+            stopAlarm()
+        }
     }
 
     override fun onDestroy() {
         stopAlarm()
         super.onDestroy()
+    }
+
+    private fun stopAlarm() {
+        if (isReleased) return
+        isReleased = true
+        
+        handler.removeCallbacksAndMessages(null)
+        try {
+            if (mediaPlayer?.isPlaying == true) {
+                mediaPlayer?.stop()
+            }
+            mediaPlayer?.release()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        mediaPlayer = null
+        vibrator?.cancel()
     }
 }

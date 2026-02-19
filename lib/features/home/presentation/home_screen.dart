@@ -81,7 +81,8 @@ class HomeScreen extends ConsumerWidget {
             }
           }
 
-          final hijriDate = HijriCalendar.fromDate(now);
+          final adjustedDate = now.add(Duration(days: settings.hijriOffset));
+          final hijriDate = HijriCalendar.fromDate(adjustedDate);
           final hijriString =
               '${hijriDate.hDay} ${hijriDate.longMonthName} ${hijriDate.hYear}';
 
@@ -135,7 +136,9 @@ class HomeScreen extends ConsumerWidget {
                             width: 14,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                          error: (_, __) => const Text('Error getting city'),
+                          error: (_, _) => const Center(
+                            child: Text('Error loading location'),
+                          ),
                         ),
                     const SizedBox(height: 8),
                     Text(
