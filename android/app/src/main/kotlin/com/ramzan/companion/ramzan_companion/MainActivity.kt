@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import android.app.AlertDialog
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -16,6 +17,44 @@ class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.ramzan.companion/nature_sound"
     private val PREMIUM_ALARM_CHANNEL = "premium_alarm_channel"
     private var ringtone: Ringtone? = null
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Phase D: Check battery optimization on app start
+        Log.d("MainActivity", "App started, checking battery optimization state...")
+        BatteryOptimizationHelper.logBatteryOptimizationState(this)
+        
+        // Show battery optimization dialog if needed
+        if (BatteryOptimizationHelper.shouldShowDialog(this)) {
+            showBatteryOptimizationDialog()
+        }
+    }
+
+    private fun showBatteryOptimizationDialog() {
+        val manufacturer = BatteryOptimizationHelper.getManufacturerName()
+        
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Enable Prayer Alarms")
+            .setMessage(
+                "To ensure prayer alarms work reliably on your $manufacturer device, " +
+                "please allow the app to run in the background.\n\n" +
+                "Tap 'Allow' to whitelist this app from battery optimization."
+            )
+            .setPositiveButton("Allow") { _, _ ->
+                Log.d("MainActivity", "User chose to allow battery optimization exception")
+                BatteryOptimizationHelper.requestDisableBatteryOptimization(this)
+                BatteryOptimizationHelper.markDialogAsShown(this)
+            }
+            .setNegativeButton("Later") { _, _ ->
+                Log.d("MainActivity", "User chose 'Later' for battery optimization exception")
+                BatteryOptimizationHelper.markDialogAsShown(this)
+            }
+            .setCancelable(false)
+            .show()
+        
+        Log.d("MainActivity", "Showing battery optimization dialog for $manufacturer device")
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
