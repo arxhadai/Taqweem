@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import android.util.Log
 
 class AlarmReceiver : BroadcastReceiver() {
@@ -22,16 +23,89 @@ class AlarmReceiver : BroadcastReceiver() {
         AlarmStorage.removeAlarm(context, alarmId)
         Log.d("AlarmReceiver", "Removed alarm from persistent storage: id=$alarmId")
 
-        // Intent to launch the AlarmActivity
+        // Phase C: Acquire WakeLock before launching fullscreen activity
+        // Prevents system from going to sleep during alarm startup
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "AlarmReceiver:alarmWakeLock_$alarmId"
+        ).apply {
+            // 10 minute timeout to prevent battery drain
+            acquire(10 * 60 * 1000L)
+            Log.d("AlarmReceiver", "WakeLock acquired for alarm id=$alarmId (10 min timeout)")
+        }
+
+        // Intent to launch the AlarmActivity with duplicate protection flags
         val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {
             putExtra("prayer_name", prayerName)
             putExtra("sound_path", soundPath)
             putExtra("alarm_id", alarmId)
-            // Important flags for full screen intent activity
+            putExtra("wake_lock_tag", "AlarmReceiver:alarmWakeLock_$alarmId")
+            // Phase C: Duplicate window protection flags
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
                     Intent.FLAG_ACTIVITY_NO_USER_ACTION
         }
+
+        val fullScreenPendingIntent = PendingIntent.getActivity(
+            context,
+            alarmId,
+            fullScreenIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "adhan_alarm_channel"
+
+        // Ensure channel exists
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (notificationManager.getNotificationChannel(channelId) == null) {
+                Log.d("AlarmReceiver", "Creating notification channel: $channelId")
+                val channel = NotificationChannel(
+                    channelId,
+                    "Adhan Alarm",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Visual alerts for prayer times"
+                    setSound(null, null)
+                    enableVibration(false)
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
+        }
+
+        // Build Notification
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(context, channelId)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(context)
+        }
+
+        Log.d("AlarmReceiver", "Creating notification with fullScreenIntent for $prayerName")
+        builder.setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("Prayer Time: $prayerName")
+            .setContentText("It is time for $prayerName prayer.")
+            .setPriority(Notification.PRIORITY_MAX)
+            .setCategory(Notification.CATEGORY_ALARM)
+            .setFullScreenIntent(fullScreenPendingIntent, true)
+            .setAutoCancel(true)
+            .setOngoing(true)
+            .setContentIntent(fullScreenPendingIntent)
+
+        Log.d("AlarmReceiver", "Showing notification with ID: $alarmId for $prayerName")
+        notificationManager.notify(alarmId, builder.build())
+        
+        // Launch AlarmActivity directly as backup
+        try {
+            Log.d("AlarmReceiver", "Attempting to launch AlarmActivity directly as backup")
+            context.startActivity(fullScreenIntent)
+        } catch (e: Exception) {
+            Log.e("AlarmReceiver", "Failed to launch AlarmActivity directly: ${e.message}")
+        }
+    }
+}
 
         val fullScreenPendingIntent = PendingIntent.getActivity(
             context,
