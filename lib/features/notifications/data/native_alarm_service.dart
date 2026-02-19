@@ -15,9 +15,16 @@ class NativeAlarmService {
     required String prayerName,
     String? soundPath,
   }) async {
-    if (defaultTargetPlatform != TargetPlatform.android) return;
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      debugPrint('NativeAlarmService: Skipping - not on Android platform');
+      return;
+    }
 
     try {
+      debugPrint(
+        'NativeAlarmService: About to schedule alarm for $prayerName at $time (ID: $alarmId, soundPath: $soundPath)',
+      );
+      
       await _channel.invokeMethod('scheduleAlarm', {
         'alarmId': alarmId,
         'timeInMillis': time.millisecondsSinceEpoch,
@@ -25,10 +32,39 @@ class NativeAlarmService {
         'soundPath': soundPath,
       });
       debugPrint(
-        'NativeAlarmService: Scheduled $prayerName at $time (ID: $alarmId)',
+        'NativeAlarmService: Successfully invoked native scheduleAlarm for $prayerName at $time (ID: $alarmId)',
       );
     } on PlatformException catch (e) {
-      debugPrint('NativeAlarmService: Failed to schedule alarm: ${e.message}');
+      debugPrint('NativeAlarmService: PlatformException - Failed to schedule alarm: ${e.message}');
+    } catch (e) {
+      debugPrint('NativeAlarmService: Exception - Failed to schedule alarm: $e');
+    }
+  }
+
+  /// Checks if the app has permission to schedule exact alarms (Android 12+).
+  Future<bool> checkExactAlarmPermission() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+    try {
+      final bool result =
+          await _channel.invokeMethod('checkExactAlarmPermission') ?? true;
+      return result;
+    } on PlatformException catch (e) {
+      debugPrint(
+        'NativeAlarmService: Failed to check exact alarm permission: ${e.message}',
+      );
+      return false;
+    }
+  }
+
+  /// Requests the user to disable battery optimizations for the app.
+  Future<void> requestBatteryOptimization() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      await _channel.invokeMethod('requestBatteryOptimization');
+    } on PlatformException catch (e) {
+      debugPrint(
+        'NativeAlarmService: Failed to request battery optimization: ${e.message}',
+      );
     }
   }
 

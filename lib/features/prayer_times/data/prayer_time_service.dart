@@ -28,8 +28,6 @@ class PrayerTimeService {
       params.fajrAngle = 16.0;
       params.maghribAngle = 4.0;
       params.ishaAngle = 14.0;
-      // Precautionary adjustment for Sehri (Imsak)
-      params.adjustments.fajr = -10;
     }
 
     // DateComponents from DateTime

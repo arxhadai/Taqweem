@@ -5,11 +5,8 @@ import 'package:ramzan_companion/core/providers/storage_provider.dart';
 import 'package:ramzan_companion/features/location/presentation/providers/location_provider.dart';
 import 'package:ramzan_companion/features/notifications/data/notification_service.dart';
 import 'package:ramzan_companion/features/notifications/presentation/notification_scheduler.dart';
-import 'package:ramzan_companion/features/prayer_times/data/prayer_time_service.dart';
-import 'package:ramzan_companion/features/prayer_times/presentation/providers/prayer_times_provider.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_provider.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_state.dart';
-import 'package:adhan/adhan.dart';
 import 'package:geolocator/geolocator.dart';
 
 // Mock NotificationService

@@ -11,6 +11,7 @@ class SettingsState {
   final Sect sect;
   final String highLatitudeRule;
   final bool isNotificationsEnabled;
+  final int hijriOffset;
 
   // Premium Timing Modes
   final TimingMode timingMode;
@@ -35,6 +36,7 @@ class SettingsState {
     this.sect = Sect.sunni,
     this.highLatitudeRule = 'None',
     this.isNotificationsEnabled = true,
+    this.hijriOffset = 0,
     this.timingMode = TimingMode.calculation,
     this.offsets = const {},
     this.manualTimes = const {},
@@ -56,6 +58,7 @@ class SettingsState {
     Sect? sect,
     String? highLatitudeRule,
     bool? isNotificationsEnabled,
+    int? hijriOffset,
     TimingMode? timingMode,
     Map<String, int>? offsets,
     Map<String, DateTime>? manualTimes,
@@ -77,6 +80,7 @@ class SettingsState {
       highLatitudeRule: highLatitudeRule ?? this.highLatitudeRule,
       isNotificationsEnabled:
           isNotificationsEnabled ?? this.isNotificationsEnabled,
+      hijriOffset: hijriOffset ?? this.hijriOffset,
       timingMode: timingMode ?? this.timingMode,
       offsets: offsets ?? this.offsets,
       manualTimes: manualTimes ?? this.manualTimes,

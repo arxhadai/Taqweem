@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ramzan_companion/features/calendar/presentation/calendar_screen.dart';
 import 'package:ramzan_companion/features/home/presentation/home_screen.dart';
+import 'package:ramzan_companion/features/home/presentation/ramadan_home_screen.dart';
+import 'package:ramzan_companion/features/home/presentation/providers/ramadan_provider.dart';
 import 'package:ramzan_companion/features/notifications/presentation/notification_scheduler.dart';
 import 'package:ramzan_companion/features/qibla/presentation/qibla_screen.dart';
 import 'package:ramzan_companion/features/settings/presentation/settings_screen.dart';
@@ -15,13 +17,6 @@ class MainScreen extends ConsumerStatefulWidget {
 
 class _MainScreenState extends ConsumerState<MainScreen> {
   int _currentIndex = 0;
-
-  final List<Widget> _screens = [
-    const HomeScreen(),
-    const CalendarScreen(),
-    const QiblaScreen(),
-    const SettingsScreen(),
-  ];
 
   @override
   void initState() {
@@ -79,8 +74,20 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final ramadan = ref.watch(ramadanProvider);
+    final homeScreen = ramadan.isRamadan
+        ? const RamadanHomeScreen()
+        : const HomeScreen();
+
+    final screens = <Widget>[
+      homeScreen,
+      const CalendarScreen(),
+      const QiblaScreen(),
+      const SettingsScreen(),
+    ];
+
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {

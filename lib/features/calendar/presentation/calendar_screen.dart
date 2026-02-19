@@ -8,11 +8,55 @@ import 'package:ramzan_companion/features/prayer_times/presentation/providers/pr
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_provider.dart';
 import 'package:ramzan_companion/shared/presentation/providers/time_provider.dart';
 
-class CalendarScreen extends ConsumerWidget {
+class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
+}
+
+class _CalendarScreenState extends ConsumerState<CalendarScreen> {
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToToday();
+    });
+  }
+
+  void _scrollToToday() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+    final today = DateTime.now();
+    final yearStart = DateTime(today.year, 1, 1);
+    final dayOfYear = today.difference(yearStart).inDays;
+    // Try to center the selected day in the viewport
+    final double itemHeight = 80.0; // approximate item extent (including margin)
+    final double viewport = _scrollController.position.viewportDimension;
+    final double rawOffset = dayOfYear * itemHeight;
+    final double centeredOffset = rawOffset - (viewport / 2) + (itemHeight / 2);
+    final double maxScroll = _scrollController.position.maxScrollExtent;
+    final double target = centeredOffset.clamp(0.0, maxScroll);
+
+    _scrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final now = ref.watch(currentDateProvider);
     final locationAsync = ref.watch(currentLocationProvider);
     final settings = ref.watch(settingsProvider);
@@ -41,12 +85,15 @@ class CalendarScreen extends ConsumerWidget {
             return const Center(child: Text('Location not available'));
           }
 
-          // Generate list for next 30 days
+          // Generate list for full year (365 days)
+          final yearStart = DateTime(now.year, 1, 1);
           return ListView.builder(
-            itemCount: 30,
+            controller: _scrollController,
+            itemCount: 365,
             itemBuilder: (context, index) {
-              final date = now.add(Duration(days: index));
-              final hijriDate = HijriCalendar.fromDate(date);
+              final date = yearStart.add(Duration(days: index));
+              final adjustedDate = date.add(Duration(days: settings.hijriOffset));
+              final hijriDate = HijriCalendar.fromDate(adjustedDate);
 
               final prayerTimes = engine.getFinalPrayerTimes(
                 latitude: location.latitude,

@@ -27,6 +27,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     final sectIndex = _storage.getInt('sect');
     final highLatRule = _storage.getString('high_lat_rule') ?? 'None';
     final notifsEnabled = _storage.getBool('notifications_enabled');
+    final hijriOff = _storage.getInt('hijri_offset');
 
     final timingModeIndex = _storage.getInt('timing_mode');
     final offsets = _getMapInt('prayer_offsets');
@@ -57,6 +58,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       sect: sectIndex != null ? Sect.values[sectIndex] : Sect.sunni,
       highLatitudeRule: highLatRule,
       isNotificationsEnabled: notifsEnabled ?? true,
+      hijriOffset: hijriOff ?? 0,
       timingMode: timingModeIndex != null
           ? TimingMode.values[timingModeIndex]
           : TimingMode.calculation,
@@ -105,6 +107,11 @@ class SettingsNotifier extends Notifier<SettingsState> {
   Future<void> updateHighLatitudeRule(String rule) async {
     state = state.copyWith(highLatitudeRule: rule);
     await _storage.setString('high_lat_rule', rule);
+  }
+
+  Future<void> updateHijriOffset(int offset) async {
+    state = state.copyWith(hijriOffset: offset.clamp(-2, 2));
+    await _storage.setInt('hijri_offset', state.hijriOffset);
   }
 
   Future<void> updateTimingMode(TimingMode mode) async {

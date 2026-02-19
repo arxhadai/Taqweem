@@ -71,7 +71,7 @@ class _QiblaCompassContent extends StatelessWidget {
                       ),
                     ),
                     loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                   ),
               Text(
                 "${qiblahDirection.direction.toInt()}°",

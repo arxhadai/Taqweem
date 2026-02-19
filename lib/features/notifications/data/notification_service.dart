@@ -131,12 +131,21 @@ class NotificationService {
     if (isAlarm && defaultTargetPlatform == TargetPlatform.android) {
       // Determine sound resource path
       String? soundPath;
-      if (sound != null && sound != 'default') {
+      const String packageName = "com.ramzan.companion.ramzan_companion";
+
+      if (sound == 'athan') {
+        soundPath = "android.resource://$packageName/raw/athan";
+      } else if (sound == 'nature') {
+        // Fallback or placeholder if file logic exists
+        soundPath = "android.resource://$packageName/raw/nature";
+      } else if (sound == 'beep') {
+        soundPath = "android.resource://$packageName/raw/beep";
+      } else if (sound != null && sound != 'default') {
+        // Custom path or untracked
         soundPath = sound;
       } else {
         // Default bundled adhan
-        soundPath =
-            "android.resource://com.ramzan.companion.ramzan_companion/raw/athan";
+        soundPath = "android.resource://$packageName/raw/athan";
       }
 
       await _nativeAlarmService.scheduleAlarm(
@@ -145,9 +154,13 @@ class NotificationService {
         prayerName: title,
         soundPath: soundPath,
       );
+      // IMPORTANT: When using native alarm, don't schedule Flutter notification
+      // The native alarm will show its own notification via AlarmReceiver
+      debugPrint('NotificationService: Native alarm scheduled for ID $id - skipping Flutter notification');
+      return;
     }
 
-    // 2. VISUAL NOTIFICATION (Always schedule for status/backup)
+    // 2. VISUAL NOTIFICATION (for notification-only mode)
     final fln.AndroidNotificationDetails
     androidPlatformChannelSpecifics = fln.AndroidNotificationDetails(
       channelId,
@@ -156,17 +169,17 @@ class NotificationService {
       importance: fln.Importance.max,
       priority: fln.Priority.max,
       enableVibration: vibration,
-      playSound:
-          !isAlarm, // Play system sound for notifications, AlarmActivity handles alarms
-      fullScreenIntent: true,
-      ongoing: isAlarm,
+      playSound: true, // Play sound for notification-only mode
+      fullScreenIntent: false,
+      ongoing: false,
       category: fln.AndroidNotificationCategory.alarm,
       visibility: fln.NotificationVisibility.public,
     );
 
     debugPrint(
-      'NotificationService: Scheduling [${isAlarm ? "ALARM" : "REMINDER"}] id: $id at $scheduledDate',
+      'NotificationService: Scheduling NOTIFICATION-ONLY id: $id at $scheduledDate',
     );
+    
     try {
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id: id,
@@ -177,13 +190,13 @@ class NotificationService {
         notificationDetails: fln.NotificationDetails(
           android: androidPlatformChannelSpecifics,
           iOS: fln.DarwinNotificationDetails(
-            sound: isAlarm ? 'athan.aiff' : null,
+            sound: 'athan.aiff',
           ),
         ),
         androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: null,
       );
-      debugPrint('NotificationService: Successfully scheduled event $id');
+      debugPrint('NotificationService: Successfully scheduled notification $id');
     } catch (e) {
       debugPrint('NotificationService: Failed to schedule event $id: $e');
     }
@@ -205,16 +218,14 @@ class NotificationService {
   Future<bool> checkPermissions() async {
     // Check Notification Permission
     final notificationStatus = await Permission.notification.status;
-    if (!notificationStatus.isGranted) return false;
+    if (!notificationStatus.isGranted) {
+      final requested = await Permission.notification.request();
+      if (!requested.isGranted) return false;
+    }
 
-    // Check Exact Alarm (Android 12+)
+    // Check Exact Alarm (Android 12+) using Native Service for reliability
     if (defaultTargetPlatform == TargetPlatform.android) {
-      final androidPlugin = flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<
-            fln.AndroidFlutterLocalNotificationsPlugin
-          >();
-      final hasExact =
-          await androidPlugin?.canScheduleExactNotifications() ?? true;
+      final hasExact = await _nativeAlarmService.checkExactAlarmPermission();
       if (!hasExact) return false;
     }
 
@@ -223,9 +234,7 @@ class NotificationService {
 
   Future<void> requestBatteryExemption() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      if (!(await Permission.ignoreBatteryOptimizations.isGranted)) {
-        await Permission.ignoreBatteryOptimizations.request();
-      }
+      await _nativeAlarmService.requestBatteryOptimization();
     }
   }
 }
