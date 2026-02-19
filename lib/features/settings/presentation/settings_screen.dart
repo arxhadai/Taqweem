@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ramzan_companion/features/notifications/presentation/notification_scheduler.dart';
 import 'package:ramzan_companion/features/prayer_times/domain/prayer_enums.dart';
@@ -344,6 +343,31 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
+          // Hijri Date Offset
+          ListTile(
+            title: const Text('Hijri Date Offset'),
+            subtitle: Text(
+              settings.hijriOffset == 0
+                  ? 'No adjustment'
+                  : '${settings.hijriOffset > 0 ? "+" : ""}${settings.hijriOffset} day(s)',
+            ),
+            leading: const Icon(Icons.calendar_today_outlined),
+            trailing: DropdownButton<int>(
+              value: settings.hijriOffset,
+              onChanged: (int? val) {
+                if (val != null) notifier.updateHijriOffset(val);
+              },
+              items: [-2, -1, 0, 1, 2]
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e,
+                      child: Text(e == 0 ? '0' : (e > 0 ? '+$e' : '$e')),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+
           // Calculation Method
           ListTile(
             title: const Text('Method'),
@@ -420,6 +444,23 @@ class SettingsScreen extends ConsumerWidget {
                 notifier.updateSect(result);
               }
             },
+          ),
+
+          // Transparency Notice for Bahawalpur Alignment
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Text(
+              'Prayer times are calculated using the Karachi method. '
+              'Local alignment adjustments are applied based on selected sect:\n'
+              '• Sunni (Hanafi) → Matches IUB mosque timing\n'
+              '• Ahl-e-Hadis → Matches Hamariweb timing\n'
+              '• Shia → Uses sect-based angular adjustments',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                height: 1.5,
+              ),
+            ),
           ),
         ],
       ),

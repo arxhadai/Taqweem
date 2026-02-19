@@ -28,12 +28,16 @@ class PrayerCalculationService {
     final dateComponents = DateComponents(date.year, date.month, date.day);
     final prayerTimes = PrayerTimes(coordinates, dateComponents, params);
 
+    // Get sect-based offsets for Bahawalpur alignment
+    final offsets = _getSectOffsets(sect);
+
+    // Apply offsets AFTER calculation to adjust for local alignment
     return {
-      'Fajr': prayerTimes.fajr,
+      'Fajr': _applyOffset(prayerTimes.fajr, offsets['fajr']!),
       'Sunrise': prayerTimes.sunrise,
       'Dhuhr': prayerTimes.dhuhr,
       'Asr': prayerTimes.asr,
-      'Maghrib': prayerTimes.maghrib,
+      'Maghrib': _applyOffset(prayerTimes.maghrib, offsets['maghrib']!),
       'Isha': prayerTimes.isha,
     };
   }
@@ -66,5 +70,41 @@ class PrayerCalculationService {
       case app_enums.Madhab.shafi:
         return Madhab.shafi;
     }
+  }
+
+  /// Centralized sect-based offset configuration for Bahawalpur alignment.
+  /// Returns offsets in minutes to apply AFTER calculation.
+  /// 
+  /// Rules:
+  /// - Hanafi: Matches IUB mosque timing in Bahawalpur
+  /// - Ahl-e-Hadis: Matches Hamariweb preventive timing
+  /// - Shia: Keeps existing angular adjustments (already applied above)
+  Map<String, int> _getSectOffsets(app_enums.Sect selectedSect) {
+    switch (selectedSect) {
+      case app_enums.Sect.sunni:
+        // Assuming Hanafi by default for Sunni (most common in Bahawalpur)
+        return {
+          'fajr': -1,       // 1 minute earlier
+          'maghrib': 6,     // 6 minutes later (IUB mosque timing)
+        };
+      case app_enums.Sect.ahleHadis:
+        return {
+          'fajr': -1,       // 1 minute earlier (preventive)
+          'maghrib': 1,     // 1 minute later (Hamariweb alignment)
+        };
+      case app_enums.Sect.shia:
+        // Shia already has angular adjustments applied above
+        // No additional offset needed as angular logic handles it
+        return {
+          'fajr': 0,        // Angular adjustments already applied
+          'maghrib': 0,     // Angular adjustments already applied
+        };
+    }
+  }
+
+  /// Applies an offset (in minutes) to a DateTime.
+  /// Offsets must be applied ONCE, after initial calculation.
+  DateTime _applyOffset(DateTime time, int minutes) {
+    return time.add(Duration(minutes: minutes));
   }
 }
