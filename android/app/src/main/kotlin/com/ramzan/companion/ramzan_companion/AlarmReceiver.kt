@@ -17,6 +17,10 @@ class AlarmReceiver : BroadcastReceiver() {
         val alarmId = intent.getIntExtra("alarm_id", 0)
 
         Log.d("AlarmReceiver", "Alarm received for: $prayerName (ID: $alarmId, soundPath: $soundPath)")
+        
+        // Remove alarm from persistent storage when it fires
+        AlarmStorage.removeAlarm(context, alarmId)
+        Log.d("AlarmReceiver", "Removed alarm from persistent storage: id=$alarmId")
 
         // Intent to launch the AlarmActivity
         val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {

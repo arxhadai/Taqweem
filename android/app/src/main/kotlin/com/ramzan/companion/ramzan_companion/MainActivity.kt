@@ -111,6 +111,29 @@ class MainActivity : FlutterActivity() {
             pendingIntent
         )
         Log.d("MainActivity", "Successfully called setAlarmClock for $prayerName")
+        
+        // Save alarm to persistent storage for recovery on crash/force-stop
+        val alarmType = when {
+            id >= 1000 && id < 2000 -> "sehri"
+            id >= 2000 && id < 3000 -> "iftar"
+            else -> "pre-alarm"
+        }
+        val dayOffset = when {
+            id >= 1000 && id < 2000 -> (id - 1000) / 100
+            id >= 2000 && id < 3000 -> (id - 2000) / 100
+            else -> 0
+        }
+        AlarmStorage.saveAlarm(
+            this,
+            StoredAlarm(
+                alarmId = id,
+                alarmType = alarmType,
+                triggerTime = timeInMillis,
+                prayerName = prayerName,
+                dayOffset = dayOffset
+            )
+        )
+        Log.d("MainActivity", "Saved alarm to persistent storage: id=$id, type=$alarmType, dayOffset=$dayOffset")
     }
 
     private fun cancelNativeAlarm(id: Int) {
