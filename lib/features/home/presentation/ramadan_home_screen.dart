@@ -87,6 +87,23 @@ class RamadanHomeScreen extends ConsumerWidget {
               final DateTime? fajrTime = prayerTimes['Fajr']?.finalTime;
               final DateTime? maghribTime = prayerTimes['Maghrib']?.finalTime;
 
+              // Dua triggers (use final adjusted times): show if now is within
+              // the window [finalTime, finalTime + 20 minutes]
+              if (fajrTime != null && now.isAfter(fajrTime) && now.isBefore(fajrTime.add(const Duration(minutes: 20)))) {
+                if (ref.read(duaOverlayProvider.notifier).canShowOverlay(DuaOverlayState.sehriActive)) {
+                  Future.microtask(() {
+                    ref.read(duaOverlayProvider.notifier).setActive(DuaOverlayState.sehriActive);
+                  });
+                }
+              }
+              if (maghribTime != null && now.isAfter(maghribTime) && now.isBefore(maghribTime.add(const Duration(minutes: 20)))) {
+                if (ref.read(duaOverlayProvider.notifier).canShowOverlay(DuaOverlayState.iftarActive)) {
+                  Future.microtask(() {
+                    ref.read(duaOverlayProvider.notifier).setActive(DuaOverlayState.iftarActive);
+                  });
+                }
+              }
+
               String countdownLabel;
               DateTime countdownTarget;
               String countdownPrayerName;
@@ -102,15 +119,7 @@ class RamadanHomeScreen extends ConsumerWidget {
                 countdownPrayerTime = DateFormat.jm().format(fajrTime);
                 showFiqaInCountdown = true;
                 
-                // Check if we should show Sehri dua overlay
-                // Show dua if we're within 5 minutes before Sehri starts and not recently dismissed
-                if (fajrTime.subtract(const Duration(minutes: 5)).isBefore(now) && now.isBefore(fajrTime)) {
-                  if (ref.read(duaOverlayProvider.notifier).canShowOverlay(DuaOverlayState.sehriActive)) {
-                    Future.microtask(() {
-                      ref.read(duaOverlayProvider.notifier).setActive(DuaOverlayState.sehriActive);
-                    });
-                  }
-                }
+                // (Dua triggers handled above)
               } else if (maghribTime != null && now.isBefore(maghribTime)) {
                 // After Fajr, before Maghrib: countdown to Maghrib (Iftar)
                 countdownLabel = 'Time until Iftar';
@@ -119,15 +128,7 @@ class RamadanHomeScreen extends ConsumerWidget {
                 countdownPrayerTime = DateFormat.jm().format(maghribTime);
                 showFiqaInCountdown = false;
                 
-                // Check if we should show Iftar dua overlay
-                // Show dua if we're within 5 minutes before Iftar and not recently dismissed
-                if (maghribTime.subtract(const Duration(minutes: 5)).isBefore(now) && now.isBefore(maghribTime)) {
-                  if (ref.read(duaOverlayProvider.notifier).canShowOverlay(DuaOverlayState.iftarActive)) {
-                    Future.microtask(() {
-                      ref.read(duaOverlayProvider.notifier).setActive(DuaOverlayState.iftarActive);
-                    });
-                  }
-                }
+                // (Dua triggers handled above)
               } else {
                 // After Maghrib: countdown to tomorrow's Fajr (when Sehri starts)
                 countdownLabel = 'Time until Sehri Starts';
@@ -222,59 +223,6 @@ class RamadanHomeScreen extends ConsumerWidget {
                 ref.read(duaOverlayProvider.notifier).dismiss();
               },
             ),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: 0,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              // Home - already here
-              break;
-            case 1:
-              // Calendar
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const Placeholder(), // Replace with CalendarScreen
-                ),
-              );
-              break;
-            case 2:
-              // Qibla direction
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const Placeholder(), // Replace with QiblaScreen
-                ),
-              );
-              break;
-            case 3:
-              // Settings
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const Placeholder(), // Replace with SettingsScreen
-                ),
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'Calendar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.compass_calibration),
-            label: 'Qibla',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
         ],
       ),
     );

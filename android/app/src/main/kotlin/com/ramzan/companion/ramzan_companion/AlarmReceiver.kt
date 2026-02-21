@@ -60,6 +60,18 @@ class AlarmReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Content intent should open the app's MainActivity (home), not the AlarmActivity
+        val contentIntent = Intent(context, MainActivity::class.java).apply {
+            putExtra("from_notification", true)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        val contentPendingIntent = PendingIntent.getActivity(
+            context,
+            alarmId + 100000, // distinct request code
+            contentIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "adhan_alarm_channel"
 
@@ -97,7 +109,7 @@ class AlarmReceiver : BroadcastReceiver() {
             .setFullScreenIntent(fullScreenPendingIntent, true)
             .setAutoCancel(true)
             .setOngoing(true)
-            .setContentIntent(fullScreenPendingIntent)
+            .setContentIntent(contentPendingIntent)
 
         Log.d("AlarmReceiver", "Showing notification with ID: $alarmId for $prayerName")
         notificationManager.notify(alarmId, builder.build())

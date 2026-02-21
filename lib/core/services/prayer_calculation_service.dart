@@ -17,13 +17,8 @@ class PrayerCalculationService {
     // Set Madhab
     params.madhab = _mapMadhab(madhab);
 
-    // Sect specific adjustments (as in original code)
-    if (sect == app_enums.Sect.shia) {
-      params.fajrAngle = 16.0;
-      params.maghribAngle = 4.0;
-      params.ishaAngle = 14.0;
-      params.adjustments.fajr = -10;
-    }
+    // Sect-specific angular adjustments are intentionally NOT applied here for Shia.
+    // We compute the base (Sunni) times first and apply Shia post-adjust offsets below
 
     final dateComponents = DateComponents(date.year, date.month, date.day);
     final prayerTimes = PrayerTimes(coordinates, dateComponents, params);
@@ -32,12 +27,22 @@ class PrayerCalculationService {
     final offsets = _getSectOffsets(sect);
 
     // Apply offsets AFTER calculation to adjust for local alignment
+    DateTime finalFajr = _applyOffset(prayerTimes.fajr, offsets['fajr']!);
+    DateTime finalMaghrib = _applyOffset(prayerTimes.maghrib, offsets['maghrib']!);
+
+    // If sect is Shia, apply sect-specific post adjustments relative to the
+    // Sunni final times: Sehri = SunniFinal - 10min, Iftar = SunniFinal + 10min
+    if (sect == app_enums.Sect.shia) {
+      finalFajr = finalFajr.subtract(const Duration(minutes: 10));
+      finalMaghrib = finalMaghrib.add(const Duration(minutes: 10));
+    }
+
     return {
-      'Fajr': _applyOffset(prayerTimes.fajr, offsets['fajr']!),
+      'Fajr': finalFajr,
       'Sunrise': prayerTimes.sunrise,
       'Dhuhr': prayerTimes.dhuhr,
       'Asr': prayerTimes.asr,
-      'Maghrib': _applyOffset(prayerTimes.maghrib, offsets['maghrib']!),
+      'Maghrib': finalMaghrib,
       'Isha': prayerTimes.isha,
     };
   }

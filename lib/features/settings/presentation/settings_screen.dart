@@ -5,6 +5,7 @@ import 'package:ramzan_companion/features/prayer_times/domain/prayer_enums.dart'
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_provider.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_state.dart';
 import 'package:ramzan_companion/features/notifications/data/alarm_sound_manager.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:ramzan_companion/core/providers/storage_provider.dart';
 import 'package:ramzan_companion/features/notifications/domain/alarm_event_type.dart';
 import 'package:ramzan_companion/core/models/prayer_timing_models.dart';
@@ -105,6 +106,7 @@ class SettingsScreen extends ConsumerWidget {
             // Per-event alarm sound configuration
             Builder(builder: (context) {
               final soundManager = AlarmSoundManager(ref.read(storageServiceProvider));
+              final Map<AlarmEventType, AudioPlayer> players = {};
               Widget buildTile(String title, AlarmEventType type) {
                 final current = soundManager.getSoundForEvent(type);
                 return ListTile(
@@ -114,9 +116,43 @@ class SettingsScreen extends ConsumerWidget {
                   trailing: TextButton(
                     child: const Text('Preview'),
                     onPressed: () async {
-                      // Reuse notification scheduler's preview mechanics if needed
-                      // For now, play a short system sound via existing flow
-                      // (Left as exercise to the existing audio player)
+                      try {
+                        // Toggle stop if already playing
+                        final existing = players[type];
+                        if (existing != null) {
+                          await existing.stop();
+                          await existing.release();
+                          players.remove(type);
+                          return;
+                        }
+
+                        String soundName = soundManager.getSoundForEvent(type);
+                        String assetPath;
+                        if (soundName == 'standard' || soundName == 'athan') {
+                          assetPath = 'assets/sounds/athan.mp3';
+                        } else {
+                          assetPath = 'assets/sounds/$soundName.mp3';
+                        }
+
+                        final player = AudioPlayer();
+                        players[type] = player;
+                        await player.play(AssetSource(assetPath.replaceFirst('assets/', '')));
+
+                        // Stop after 6 seconds automatically
+                        Future.delayed(const Duration(seconds: 6), () async {
+                          if (players[type] == player) {
+                            await player.stop();
+                            await player.release();
+                            players.remove(type);
+                          }
+                        });
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Preview failed: $e')),
+                          );
+                        }
+                      }
                     },
                   ),
                   onTap: () async {

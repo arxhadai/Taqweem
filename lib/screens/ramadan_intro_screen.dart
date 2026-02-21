@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ramzan_companion/features/home/presentation/ramadan_home_screen.dart';
-import 'package:ramzan_companion/painters/islamic_arch_painter.dart';
+import 'package:ramzan_companion/shared/presentation/main_screen.dart';
 import 'package:ramzan_companion/painters/particle_painter.dart';
+import 'package:hijri/hijri_calendar.dart';
 
 class RamadanIntroScreen extends StatefulWidget {
   const RamadanIntroScreen({super.key});
@@ -70,7 +70,7 @@ class _RamadanIntroScreenState extends State<RamadanIntroScreen>
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const RamadanHomeScreen()),
+          MaterialPageRoute(builder: (_) => const MainScreen()),
         );
       }
     });
@@ -105,16 +105,6 @@ class _RamadanIntroScreenState extends State<RamadanIntroScreen>
             ),
           ),
 
-          // Subtle mosque silhouette
-          Positioned.fill(
-            child: Opacity(
-              opacity: 0.08,
-              child: CustomPaint(
-                painter: MosqueSilhouettePainter(),
-              ),
-            ),
-          ),
-
           // Floating particles
           Positioned.fill(
             child: AnimatedBuilder(
@@ -127,19 +117,7 @@ class _RamadanIntroScreenState extends State<RamadanIntroScreen>
             ),
           ),
 
-          // Top Islamic arch border
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SizedBox(
-              height: 120,
-              child: CustomPaint(
-                painter: IslamicArchPainter(),
-                size: Size.infinite,
-              ),
-            ),
-          ),
+          // Top decorative space (arch removed in stabilization)
 
           // Center content with animations
           FadeTransition(
@@ -149,7 +127,7 @@ class _RamadanIntroScreenState extends State<RamadanIntroScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Glowing Crescent Icon
+                    // Glowing Crescent Moon
                     ScaleTransition(
                       scale: _scaleAnimation,
                       child: Container(
@@ -158,7 +136,6 @@ class _RamadanIntroScreenState extends State<RamadanIntroScreen>
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           boxShadow: [
-                            // Outer glow effect
                             BoxShadow(
                               color: const Color(0xFFD4AF37).withValues(alpha: 0.6),
                               blurRadius: 40,
@@ -172,7 +149,7 @@ class _RamadanIntroScreenState extends State<RamadanIntroScreen>
                           ],
                         ),
                         child: const Icon(
-                          Icons.wb_incandescent_rounded,
+                          Icons.brightness_2,
                           size: 80,
                           color: Color(0xFFD4AF37),
                         ),
@@ -241,48 +218,10 @@ class _RamadanIntroScreenState extends State<RamadanIntroScreen>
       ),
     );
   }
-
   String _getHijriDate() {
     final now = DateTime.now();
-    return 'Ramadan 1445 AH | ${now.day}/${now.month}/${now.year} CE';
+    final hijri = HijriCalendar.fromDate(now);
+    return '${hijri.hDay} ${hijri.longMonthName} ${hijri.hYear} AH | ${now.day}/${now.month}/${now.year} CE';
   }
 }
 
-/// Custom painter for subtle mosque silhouette
-class MosqueSilhouettePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.1)
-      ..style = PaintingStyle.fill;
-
-    final centerX = size.width / 2;
-    final centerY = size.height / 2;
-
-    // Draw mosque dome (simple circle)
-    canvas.drawCircle(Offset(centerX, centerY - 80), 60, paint);
-
-    // Draw minarets (simple towers)
-    canvas.drawRect(
-      Rect.fromLTWH(centerX - 150, centerY - 60, 30, 120),
-      paint,
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(centerX + 120, centerY - 60, 30, 120),
-      paint,
-    );
-
-    // Draw minaret tops (circles)
-    canvas.drawCircle(Offset(centerX - 135, centerY - 70), 15, paint);
-    canvas.drawCircle(Offset(centerX + 135, centerY - 70), 15, paint);
-
-    // Draw main building base
-    canvas.drawRect(
-      Rect.fromLTWH(centerX - 120, centerY, 240, 100),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
