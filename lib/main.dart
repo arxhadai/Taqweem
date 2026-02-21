@@ -10,7 +10,7 @@ import 'package:ramzan_companion/features/always_on_timer/presentation/providers
 import 'package:ramzan_companion/features/notifications/data/notification_service.dart';
 import 'package:ramzan_companion/features/notifications/presentation/notification_scheduler.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_provider.dart';
-import 'package:ramzan_companion/shared/presentation/main_screen.dart';
+import 'package:ramzan_companion/screens/ramadan_intro_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,7 +60,7 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settings.themeMode,
-      home: const MainScreen(),
+      home: const RamadanIntroScreen(),
     );
   }
 }

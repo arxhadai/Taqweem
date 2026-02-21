@@ -6,6 +6,8 @@ import 'package:ramzan_companion/features/location/presentation/providers/locati
 import 'package:ramzan_companion/features/notifications/data/alarm_scheduler_service.dart';
 import 'package:ramzan_companion/features/notifications/presentation/notification_scheduler.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_provider.dart';
+import 'package:ramzan_companion/features/notifications/data/alarm_sound_manager.dart';
+import 'package:ramzan_companion/core/providers/storage_provider.dart';
 
 final prayerEngineServiceProvider = Provider((ref) => PrayerEngineService(ref));
 
@@ -45,8 +47,10 @@ class PrayerEngineService {
     }
     _lastPosition = position;
 
+    final soundManager = AlarmSoundManager(_ref.read(storageServiceProvider));
     final alarmScheduler = AlarmSchedulerService(
       _ref.read(notificationServiceProvider),
+      soundManager,
     );
 
     // Step 5: Recalculate for next 10 days

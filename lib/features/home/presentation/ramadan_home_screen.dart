@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:ramzan_companion/core/models/prayer_timing_models.dart';
 import 'package:ramzan_companion/features/home/presentation/providers/ramadan_provider.dart';
+import 'package:ramzan_companion/features/home/presentation/providers/dua_overlay_provider.dart';
 import 'package:ramzan_companion/features/location/presentation/providers/location_provider.dart';
 import 'package:ramzan_companion/features/prayer_times/presentation/providers/prayer_times_provider.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_provider.dart';
@@ -12,6 +13,8 @@ import 'package:ramzan_companion/shared/presentation/providers/time_provider.dar
 import 'package:ramzan_companion/features/always_on_timer/presentation/screens/always_on_timer_screen.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_state.dart';
 import 'package:ramzan_companion/features/prayer_times/domain/prayer_enums.dart';
+import 'package:ramzan_companion/widgets/ramadan_dua_overlay.dart';
+import 'package:ramzan_companion/data/duas.dart';
 
 class RamadanHomeScreen extends ConsumerWidget {
   const RamadanHomeScreen({super.key});
@@ -22,6 +25,7 @@ class RamadanHomeScreen extends ConsumerWidget {
     final prayerTimesAsync = ref.watch(currentPrayerTimesProvider);
     final ramadan = ref.watch(ramadanProvider);
     final settings = ref.watch(settingsProvider);
+    final duaOverlayState = ref.watch(duaOverlayProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -39,81 +43,104 @@ class RamadanHomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: prayerTimesAsync.when(
-        data: (prayerTimes) {
-          if (prayerTimes == null) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.location_off, size: 60, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('Unable to get location.'),
-                ],
-              ),
-            );
-          }
+      body: Stack(
+        children: [
+          // Main content
+          prayerTimesAsync.when(
+            data: (prayerTimes) {
+              if (prayerTimes == null) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.location_off, size: 60, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text('Unable to get location.'),
+                    ],
+                  ),
+                );
+              }
 
-          // Determine next prayer
-          final sortedTimes = prayerTimes.entries
-              .where((e) => e.key != 'Sunrise')
-              .toList();
-          sortedTimes.sort(
-            (a, b) => a.value.finalTime.compareTo(b.value.finalTime),
-          );
+              // Determine next prayer
+              final sortedTimes = prayerTimes.entries
+                  .where((e) => e.key != 'Sunrise')
+                  .toList();
+              sortedTimes.sort(
+                (a, b) => a.value.finalTime.compareTo(b.value.finalTime),
+              );
 
-          PrayerTimeModel? nextPrayerModel;
-          String nextPrayerName = '';
+              PrayerTimeModel? nextPrayerModel;
+              String nextPrayerName = '';
 
-          for (var entry in sortedTimes) {
-            if (entry.value.finalTime.isAfter(now)) {
-              nextPrayerModel = entry.value;
-              nextPrayerName = entry.key;
-              break;
-            }
-          }
+              for (var entry in sortedTimes) {
+                if (entry.value.finalTime.isAfter(now)) {
+                  nextPrayerModel = entry.value;
+                  nextPrayerName = entry.key;
+                  break;
+                }
+              }
 
-          // Countdown logic: During Ramadan
-          // 1. Before Fajr: Show countdown to Fajr (Sehri ends at Fajr)
-          // 2. After Fajr, before Maghrib: Show countdown to Maghrib (Iftar)
-          // 3. After Maghrib: Show countdown to tomorrow's Fajr (Sehri starts)
-          final DateTime? fajrTime = prayerTimes['Fajr']?.finalTime;
-          final DateTime? maghribTime = prayerTimes['Maghrib']?.finalTime;
+              // Countdown logic: During Ramadan
+              // 1. Before Fajr: Show countdown to Fajr (Sehri ends at Fajr)
+              // 2. After Fajr, before Maghrib: Show countdown to Maghrib (Iftar)
+              // 3. After Maghrib: Show countdown to tomorrow's Fajr (Sehri starts)
+              final DateTime? fajrTime = prayerTimes['Fajr']?.finalTime;
+              final DateTime? maghribTime = prayerTimes['Maghrib']?.finalTime;
 
-          String countdownLabel;
-          DateTime countdownTarget;
-          String countdownPrayerName;
-          String countdownPrayerTime;
-          bool showFiqaInCountdown = false;
+              String countdownLabel;
+              DateTime countdownTarget;
+              String countdownPrayerName;
+              String countdownPrayerTime;
+              bool showFiqaInCountdown = false;
 
-          // Check if we're before Fajr (Sehri time) or after Fajr (Iftar/next Sehri time)
-          if (fajrTime != null && now.isBefore(fajrTime)) {
-            // Before Fajr: countdown to Fajr (when Sehri ends)
-            countdownLabel = 'Time until Sehri Ends';
-            countdownTarget = fajrTime;
-            countdownPrayerName = 'Fajr';
-            countdownPrayerTime = DateFormat.jm().format(fajrTime);
-            showFiqaInCountdown = true;
-          } else if (maghribTime != null && now.isBefore(maghribTime)) {
-            // After Fajr, before Maghrib: countdown to Maghrib (Iftar)
-            countdownLabel = 'Time until Iftar';
-            countdownTarget = maghribTime;
-            countdownPrayerName = 'Maghrib';
-            countdownPrayerTime = DateFormat.jm().format(maghribTime);
-            showFiqaInCountdown = false;
-          } else {
-            // After Maghrib: countdown to tomorrow's Fajr (when Sehri starts)
-            countdownLabel = 'Time until Sehri Starts';
-            final fajrTomorrow = fajrTime != null
-                ? fajrTime.add(const Duration(days: 1))
-                : now.add(const Duration(hours: 24));
-            countdownTarget = fajrTomorrow;
-            countdownPrayerName = 'Fajr';
-            countdownPrayerTime = fajrTime != null
-                ? DateFormat.jm().format(fajrTime)
-                : 'Unknown';
-            showFiqaInCountdown = true;
-          }
+              // Check if we're before Fajr (Sehri time) or after Fajr (Iftar/next Sehri time)
+              if (fajrTime != null && now.isBefore(fajrTime)) {
+                // Before Fajr: countdown to Fajr (when Sehri ends)
+                countdownLabel = 'Time until Sehri Ends';
+                countdownTarget = fajrTime;
+                countdownPrayerName = 'Fajr';
+                countdownPrayerTime = DateFormat.jm().format(fajrTime);
+                showFiqaInCountdown = true;
+                
+                // Check if we should show Sehri dua overlay
+                // Show dua if we're within 5 minutes before Sehri starts and not recently dismissed
+                if (fajrTime.subtract(const Duration(minutes: 5)).isBefore(now) && now.isBefore(fajrTime)) {
+                  if (ref.read(duaOverlayProvider.notifier).canShowOverlay(DuaOverlayState.sehriActive)) {
+                    Future.microtask(() {
+                      ref.read(duaOverlayProvider.notifier).setActive(DuaOverlayState.sehriActive);
+                    });
+                  }
+                }
+              } else if (maghribTime != null && now.isBefore(maghribTime)) {
+                // After Fajr, before Maghrib: countdown to Maghrib (Iftar)
+                countdownLabel = 'Time until Iftar';
+                countdownTarget = maghribTime;
+                countdownPrayerName = 'Maghrib';
+                countdownPrayerTime = DateFormat.jm().format(maghribTime);
+                showFiqaInCountdown = false;
+                
+                // Check if we should show Iftar dua overlay
+                // Show dua if we're within 5 minutes before Iftar and not recently dismissed
+                if (maghribTime.subtract(const Duration(minutes: 5)).isBefore(now) && now.isBefore(maghribTime)) {
+                  if (ref.read(duaOverlayProvider.notifier).canShowOverlay(DuaOverlayState.iftarActive)) {
+                    Future.microtask(() {
+                      ref.read(duaOverlayProvider.notifier).setActive(DuaOverlayState.iftarActive);
+                    });
+                  }
+                }
+              } else {
+                // After Maghrib: countdown to tomorrow's Fajr (when Sehri starts)
+                countdownLabel = 'Time until Sehri Starts';
+                final fajrTomorrow = fajrTime != null
+                    ? fajrTime.add(const Duration(days: 1))
+                    : now.add(const Duration(hours: 24));
+                countdownTarget = fajrTomorrow;
+                countdownPrayerName = 'Fajr';
+                countdownPrayerTime = fajrTime != null
+                    ? DateFormat.jm().format(fajrTime)
+                    : 'Unknown';
+                showFiqaInCountdown = true;
+              }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -156,21 +183,99 @@ class RamadanHomeScreen extends ConsumerWidget {
               ],
             ),
           );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.amber),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading prayer times.\n$error',
-                textAlign: TextAlign.center,
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.amber),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading prayer times.\n$error',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          // Dua Overlay - layered on top
+          if (duaOverlayState == DuaOverlayState.sehriActive)
+            RamadanDuaOverlay(
+              dua: Duas.sehri,
+              hijriDate: ramadan.hijriDateString,
+              currentTime: DateFormat.jm().format(now),
+              currentRoza: ramadan.ramadanDay,
+              totalRoza: ramadan.totalDays,
+              onDismiss: () {
+                ref.read(duaOverlayProvider.notifier).dismiss();
+              },
+            ),
+          if (duaOverlayState == DuaOverlayState.iftarActive)
+            RamadanDuaOverlay(
+              dua: Duas.iftar,
+              hijriDate: ramadan.hijriDateString,
+              currentTime: DateFormat.jm().format(now),
+              currentRoza: ramadan.ramadanDay,
+              totalRoza: ramadan.totalDays,
+              onDismiss: () {
+                ref.read(duaOverlayProvider.notifier).dismiss();
+              },
+            ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: 0,
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              // Home - already here
+              break;
+            case 1:
+              // Calendar
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const Placeholder(), // Replace with CalendarScreen
+                ),
+              );
+              break;
+            case 2:
+              // Qibla direction
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const Placeholder(), // Replace with QiblaScreen
+                ),
+              );
+              break;
+            case 3:
+              // Settings
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const Placeholder(), // Replace with SettingsScreen
+                ),
+              );
+              break;
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Calendar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.compass_calibration),
+            label: 'Qibla',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }

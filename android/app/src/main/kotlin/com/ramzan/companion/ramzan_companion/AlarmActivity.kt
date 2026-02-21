@@ -110,34 +110,70 @@ class AlarmActivity : Activity() {
 
         // Phase C: Start MediaPlayer with proper audio attributes and looping
         try {
-            mediaPlayer = MediaPlayer()
-            val uri = if (soundPath != null && soundPath.startsWith("android.resource")) {
-                Uri.parse(soundPath)
-            } else if (soundPath != null && !soundPath.contains("default")) {
-                Uri.parse(soundPath)
-            } else {
-                // Default fallback
-                Uri.parse("android.resource://$packageName/raw/athan")
-            }
-
-            mediaPlayer?.apply {
-                setDataSource(applicationContext, uri)
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                isLooping = true
-                setVolume(volumeLevel, volumeLevel)
-                prepare()
-                start()
-                Log.d("AlarmActivity", "MediaPlayer started with audio attributes USAGE_ALARM")
-            }
+            // New behavior: prefer soundName extra (resource name in raw/), fallback to soundPath URI
+            val soundName = intent.getStringExtra("soundName")
+            Log.d("ALARM_SOUND_DEBUG", "AlarmActivity.startAlarm: soundName=$soundName, soundPath=$soundPath")
             
-            // Fade-in volume
-            startFadeIn()
+            if (soundName != null && soundName.isNotEmpty()) {
+                Log.d("ALARM_SOUND_DEBUG", "Resolving resource for soundName='$soundName'")
+                val resId = resources.getIdentifier(soundName, "raw", packageName)
+                Log.d("ALARM_SOUND_DEBUG", "getIdentifier('$soundName', 'raw', '$packageName') returned resId=$resId")
+                
+                if (resId == 0) {
+                    Log.e("ALARM_SOUND_DEBUG", "ERROR: Resource not found for soundName='$soundName', falling back to 'standard'")
+                    val defaultResId = resources.getIdentifier("standard", "raw", packageName)
+                    if (defaultResId != 0) {
+                        mediaPlayer?.release()
+                        mediaPlayer = MediaPlayer.create(this, defaultResId)
+                    } else {
+                        Log.e("ALARM_SOUND_DEBUG", "ERROR: 'standard' resource also not found! No sound will play")
+                    }
+                } else {
+                    Log.d("ALARM_SOUND_DEBUG", "Successfully found resource id=$resId for soundName='$soundName', creating MediaPlayer")
+                    mediaPlayer?.release()
+                    mediaPlayer = MediaPlayer.create(this, resId)
+                }
+                
+                mediaPlayer?.apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    isLooping = true
+                    setVolume(volumeLevel, volumeLevel)
+                    start()
+                    Log.d("ALARM_SOUND_DEBUG", "MediaPlayer started with soundName='$soundName', isPlaying=${this.isPlaying}")
+                }
+                startFadeIn()
+            } else {
+                mediaPlayer = MediaPlayer()
+                val uri = if (soundPath != null && soundPath.startsWith("android.resource")) {
+                    Uri.parse(soundPath)
+                } else if (soundPath != null && !soundPath.contains("default")) {
+                    Uri.parse(soundPath)
+                } else {
+                    // Default fallback
+                    Uri.parse("android.resource://$packageName/raw/athan")
+                }
 
+                mediaPlayer?.apply {
+                    setDataSource(applicationContext, uri)
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    isLooping = true
+                    setVolume(volumeLevel, volumeLevel)
+                    prepare()
+                    start()
+                    Log.d("AlarmActivity", "MediaPlayer started with audio attributes USAGE_ALARM")
+                }
+                startFadeIn()
+            }
         } catch (e: Exception) {
             Log.e("AlarmActivity", "Error starting primary audio: ${e.message}", e)
             e.printStackTrace()
@@ -260,8 +296,5 @@ class AlarmActivity : Activity() {
         } catch (e: Exception) {
             Log.e("AlarmActivity", "Error cancelling vibrator: ${e.message}")
         }
-    }
-}
-        vibrator?.cancel()
     }
 }

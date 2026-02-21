@@ -14,6 +14,8 @@ class NativeAlarmService {
     required DateTime time,
     required String prayerName,
     String? soundPath,
+    String? eventType,
+    String? soundName,
   }) async {
     if (defaultTargetPlatform != TargetPlatform.android) {
       debugPrint('NativeAlarmService: Skipping - not on Android platform');
@@ -25,12 +27,17 @@ class NativeAlarmService {
         'NativeAlarmService: About to schedule alarm for $prayerName at $time (ID: $alarmId, soundPath: $soundPath)',
       );
       
-      await _channel.invokeMethod('scheduleAlarm', {
+      final Map<String, dynamic> payload = {
         'alarmId': alarmId,
         'timeInMillis': time.millisecondsSinceEpoch,
         'prayerName': prayerName,
-        'soundPath': soundPath,
-      });
+      };
+      if (eventType != null) payload['eventType'] = eventType;
+      if (soundName != null) payload['soundName'] = soundName;
+      if (soundPath != null && (soundName == null)) payload['soundPath'] = soundPath;
+
+      debugPrint('DEBUG [NativeAlarmService] MethodChannel payload keys: ${payload.keys.toList()}, soundName=$soundName');
+      await _channel.invokeMethod('scheduleAlarm', payload);
       debugPrint(
         'NativeAlarmService: Successfully invoked native scheduleAlarm for $prayerName at $time (ID: $alarmId)',
       );

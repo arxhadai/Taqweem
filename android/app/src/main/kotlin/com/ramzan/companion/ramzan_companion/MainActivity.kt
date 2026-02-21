@@ -83,8 +83,12 @@ class MainActivity : FlutterActivity() {
                     val timeInMillis = call.argument<Long>("timeInMillis") ?: 0L
                     val prayerName = call.argument<String>("prayerName") ?: ""
                     val soundPath = call.argument<String>("soundPath")
-                    
-                    scheduleNativeAlarm(id, timeInMillis, prayerName, soundPath)
+                    val eventType = call.argument<String>("eventType")
+                    val soundName = call.argument<String>("soundName")
+
+                    Log.d("ALARM_SOUND_DEBUG", "MainActivity MethodChannel: eventType=$eventType, soundName=$soundName, id=$id")
+
+                    scheduleNativeAlarm(id, timeInMillis, prayerName, soundPath, eventType, soundName)
                     result.success(true)
                 }
                 "cancelAlarm" -> {
@@ -104,13 +108,17 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun scheduleNativeAlarm(id: Int, timeInMillis: Long, prayerName: String, soundPath: String?) {
+    private fun scheduleNativeAlarm(id: Int, timeInMillis: Long, prayerName: String, soundPath: String?, eventType: String?, soundName: String?) {
+        Log.d("ALARM_SOUND_DEBUG", "scheduleNativeAlarm: id=$id, prayerName=$prayerName, soundPath=$soundPath, eventType=$eventType, soundName=$soundName")
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
         val intent = android.content.Intent(this, AlarmReceiver::class.java).apply {
             putExtra("prayer_name", prayerName)
             putExtra("sound_path", soundPath)
+            if (eventType != null) putExtra("event_type", eventType)
+            if (soundName != null) putExtra("soundName", soundName)
             putExtra("alarm_id", id)
         }
+        Log.d("ALARM_SOUND_DEBUG", "Intent extras: soundName=$soundName, eventType=$eventType")
 
         val pendingIntent = android.app.PendingIntent.getBroadcast(
             this,

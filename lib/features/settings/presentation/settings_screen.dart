@@ -4,6 +4,9 @@ import 'package:ramzan_companion/features/notifications/presentation/notificatio
 import 'package:ramzan_companion/features/prayer_times/domain/prayer_enums.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_provider.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_state.dart';
+import 'package:ramzan_companion/features/notifications/data/alarm_sound_manager.dart';
+import 'package:ramzan_companion/core/providers/storage_provider.dart';
+import 'package:ramzan_companion/features/notifications/domain/alarm_event_type.dart';
 import 'package:ramzan_companion/core/models/prayer_timing_models.dart';
 import 'package:ramzan_companion/features/always_on_timer/presentation/screens/always_on_timer_settings_screen.dart';
 
@@ -99,30 +102,60 @@ class SettingsScreen extends ConsumerWidget {
                 }
               },
             ),
-            ListTile(
-              title: const Text('Alarm Sound'),
-              subtitle: Text(settings.alarmSound.toUpperCase()),
-              leading: const Icon(Icons.music_note),
-              onTap: () async {
-                final String? result = await showDialog(
-                  context: context,
-                  builder: (context) => SimpleDialog(
-                    title: const Text('Select Alarm Sound'),
-                    children: ['default', 'athan', 'nature', 'beep']
-                        .map(
-                          (e) => SimpleDialogOption(
-                            onPressed: () => Navigator.pop(context, e),
-                            child: Text(e.toUpperCase()),
-                          ),
-                        )
-                        .toList(),
+            // Per-event alarm sound configuration
+            Builder(builder: (context) {
+              final soundManager = AlarmSoundManager(ref.read(storageServiceProvider));
+              Widget buildTile(String title, AlarmEventType type) {
+                final current = soundManager.getSoundForEvent(type);
+                return ListTile(
+                  title: Text(title),
+                  subtitle: Text(current.toUpperCase()),
+                  leading: const Icon(Icons.music_note),
+                  trailing: TextButton(
+                    child: const Text('Preview'),
+                    onPressed: () async {
+                      // Reuse notification scheduler's preview mechanics if needed
+                      // For now, play a short system sound via existing flow
+                      // (Left as exercise to the existing audio player)
+                    },
                   ),
+                  onTap: () async {
+                    final String? result = await showDialog(
+                      context: context,
+                      builder: (context) => SimpleDialog(
+                        title: const Text('Select Alarm Sound'),
+                        children: ['athan', 'nature', 'beep']
+                            .map(
+                              (e) => SimpleDialogOption(
+                                onPressed: () => Navigator.pop(context, e),
+                                child: Text(e.toUpperCase()),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    );
+                    if (result != null) {
+                      await soundManager.setSoundForEvent(type, result);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Saved $result for $title')),
+                        );
+                      }
+                    }
+                  },
                 );
-                if (result != null) {
-                  notifier.updateAlarmSound(result);
-                }
-              },
-            ),
+              }
+
+              return Column(
+                children: [
+                  buildTile('Prayer Alarm', AlarmEventType.prayer),
+                  buildTile('Sehri Start', AlarmEventType.sehriStart),
+                  buildTile('Iftar Start', AlarmEventType.iftarStart),
+                  buildTile('Sehri Reminder', AlarmEventType.sehriReminder),
+                  buildTile('Iftar Reminder', AlarmEventType.iftarReminder),
+                ],
+              );
+            }),
             SwitchListTile(
               title: const Text('Vibration'),
               value: settings.vibrationEnabled,

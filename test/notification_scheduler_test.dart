@@ -8,6 +8,7 @@ import 'package:ramzan_companion/features/notifications/presentation/notificatio
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_provider.dart';
 import 'package:ramzan_companion/features/settings/presentation/providers/settings_state.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:ramzan_companion/features/notifications/domain/alarm_event_type.dart';
 
 // Mock NotificationService
 class MockNotificationService extends NotificationService {
@@ -31,6 +32,7 @@ class MockNotificationService extends NotificationService {
     required String body,
     required DateTime scheduledDate,
     String? sound,
+    AlarmEventType? eventType,
     bool vibration = true,
     bool isAlarm = false,
   }) async {

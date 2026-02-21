@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'native_alarm_service.dart';
+import 'package:ramzan_companion/features/notifications/domain/alarm_event_type.dart';
 
 class NotificationService {
   final fln.FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -121,6 +122,7 @@ class NotificationService {
     required String body,
     required DateTime scheduledDate,
     String? sound,
+    AlarmEventType? eventType,
     bool vibration = true,
     bool isAlarm = false,
   }) async {
@@ -130,30 +132,42 @@ class NotificationService {
     // 1. PREMIUM ALARM (Native AlarmActivity)
     if (isAlarm && defaultTargetPlatform == TargetPlatform.android) {
       // Determine sound resource path
-      String? soundPath;
-      const String packageName = "com.ramzan.companion.ramzan_companion";
-
-      if (sound == 'athan') {
-        soundPath = "android.resource://$packageName/raw/athan";
-      } else if (sound == 'nature') {
-        // Fallback or placeholder if file logic exists
-        soundPath = "android.resource://$packageName/raw/nature";
-      } else if (sound == 'beep') {
-        soundPath = "android.resource://$packageName/raw/beep";
-      } else if (sound != null && sound != 'default') {
-        // Custom path or untracked
-        soundPath = sound;
+      // New behaviour: if caller provided eventType and sound is the soundName,
+      // pass both to native. This keeps backward compatibility if only soundPath used.
+      if (eventType != null && sound != null) {
+        debugPrint('DEBUG [NotificationService] Scheduling NATIVE ALARM: eventType=${eventType.name}, soundName=$sound, id=$id');
+        await _nativeAlarmService.scheduleAlarm(
+          alarmId: id,
+          time: scheduledDate,
+          prayerName: title,
+          eventType: eventType.name,
+          soundName: sound,
+        );
       } else {
-        // Default bundled adhan
-        soundPath = "android.resource://$packageName/raw/athan";
-      }
+        String? soundPath;
+        const String packageName = "com.ramzan.companion.ramzan_companion";
 
-      await _nativeAlarmService.scheduleAlarm(
-        alarmId: id,
-        time: scheduledDate,
-        prayerName: title,
-        soundPath: soundPath,
-      );
+        if (sound == 'athan') {
+          soundPath = "android.resource://$packageName/raw/athan";
+        } else if (sound == 'nature') {
+          soundPath = "android.resource://$packageName/raw/nature";
+        } else if (sound == 'beep') {
+          soundPath = "android.resource://$packageName/raw/beep";
+        } else if (sound != null && sound != 'default') {
+          // Custom path or untracked
+          soundPath = sound;
+        } else {
+          // Default bundled adhan
+          soundPath = "android.resource://$packageName/raw/athan";
+        }
+
+        await _nativeAlarmService.scheduleAlarm(
+          alarmId: id,
+          time: scheduledDate,
+          prayerName: title,
+          soundPath: soundPath,
+        );
+      }
       // IMPORTANT: When using native alarm, don't schedule Flutter notification
       // The native alarm will show its own notification via AlarmReceiver
       debugPrint('NotificationService: Native alarm scheduled for ID $id - skipping Flutter notification');
